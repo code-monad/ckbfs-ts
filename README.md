@@ -1,6 +1,6 @@
 # CKBFS TypeScript Examples
 
-This repo is a very basic example about how to post (CKBFS)[https://github.com/code-monad/ckbfs] cells into CKB chain.
+This repo is a very basic example about how to post [CKBFS](https://github.com/code-monad/ckbfs) cells into CKB chain.
 
 ## How to run
 
