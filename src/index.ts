@@ -156,6 +156,8 @@ async function main() {
 
 main().then(() => {
     console.log("completed successfully.");
+    process.exit(0);
 }).catch((error) => {
     console.error("Unexpected error occurred:", error);
+    process.exit(-1);
 });
