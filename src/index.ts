@@ -48,7 +48,6 @@ function uint8ArrayToHex(uint8Array: Uint8Array): string {
 }
 
 async function main() {
-    console.log(uint8ArrayToHex(Indexes.pack([0x1])));
     // Read file contents and generate Adler-32 checksum
     const filePath = "./kazeno_matasaburou.txt";
     const fileContents = fs.readFileSync(filePath, "utf-8");
@@ -58,14 +57,15 @@ async function main() {
     const checksum = checksumBuffer.readUInt32BE();
     // print checksum to ensure hand-debug stuffs
     console.log(`checksum:${checksum}`);
+    // split file chunks. in order to avoid lock script limitation
     const chunkSize = 30 * 1024;
     const fileChunks: Buffer[] = [];
-    // split file chunks. in order to avoid lock script limitation
     for (let i = 0; i < fileBuffer.length; i += chunkSize) {
         fileChunks.push(Buffer.from(fileBuffer.slice(i, i + chunkSize)));
     }
 
 
+    // CKBFS Cell Data packing
     const outputData = CKBFSData.pack({
         index: Array.from({ length: fileChunks.length}, (_, i) => 0x1 + i),
         checksum: checksum,
@@ -85,6 +85,7 @@ async function main() {
 
     const client = new ClientPublicTestnet();
 
+    // set this in your env or cli
     const privateKey = process.env.CKB_PRIVATE_KEY;
         if (!privateKey) {
             throw new Error("CKB_PRIVATE_KEY is not set in the environment variables");
@@ -108,7 +109,6 @@ async function main() {
                     depType: "depGroup"
                 }
             ],
-
             outputs: [
                 {
                     lock,
@@ -116,6 +116,7 @@ async function main() {
                 }
             ],
 
+            // prepare witnesses for signing. [0] is secp witness and [1...] are our file
             witnesses: [
                 [],
                 ...ckbfsWitnesses.map((chunk,_) =>{return `0x${chunk}`}).slice(),
@@ -130,8 +131,7 @@ async function main() {
     let args = ccc.hashTypeId(preTx.inputs[0], 0x0);
     const ckbfs_type_script = new Script(ckbfsDataHash, "data1", args);
     const tx = Transaction.from({
-        cellDeps: preTx.cellDeps,
-        witnesses: [[], ...ckbfsWitnesses.map((chunk,_) =>{return `0x${chunk}`}).slice(),],
+        witnesses: [[], ...preTx.witnesses.slice(1)], // reset first witness for signing
         outputsData: preTx.outputsData,
         inputs: preTx.inputs,
         outputs: [
@@ -140,7 +140,7 @@ async function main() {
                 type: ckbfs_type_script,
                 capacity: preTx.outputs[0].capacity,
             },
-            ...preTx.outputs.slice(1)
+            ...preTx.outputs.slice(1) // concat rest of the output (do not forget our exchange cell)
         ]
     })
     const signedTx = await signer.signTransaction(tx);
@@ -150,7 +150,7 @@ async function main() {
 
     const txHash = await client.sendTransaction(signedTx);
 
-    console.log(`${txHash}`);
+    console.log(`https://testnet.explorer.nervos.org/transaction/${txHash}`);
 
 }
 
