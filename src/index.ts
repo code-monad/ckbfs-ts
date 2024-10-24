@@ -125,9 +125,6 @@ async function main() {
             ]
         }
     )
-
-    await preTx.setOutputDataAt(0, outputData);
-    
     await preTx.completeInputsByCapacity(signer);
     await preTx.completeFeeChangeToLock(signer, lock, 2000);
     let args = ccc.hashTypeId(preTx.inputs[0], 0x0);
@@ -151,7 +148,7 @@ async function main() {
     // maybe don't print this? too long logs.
     //console.log(signedTx.stringify());
 
-    const txHash = await client.sendTransactionDry(signedTx);
+    const txHash = await client.sendTransaction(signedTx);
 
     console.log(`${txHash}`);
 
